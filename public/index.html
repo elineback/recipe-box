@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recipe Box</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#recipes"><span aria-hidden="true">🍳</span> Recipe Box</a>
+      <nav id="nav">
+        <a href="#recipes" data-view="recipes">Recipes</a>
+        <a href="#add" data-view="add">Add recipe</a>
+        <a href="#week" data-view="week">This week</a>
+        <a href="#shopping" data-view="shopping">Shopping list</a>
+      </nav>
+    </header>
+    <main id="main"></main>
+    <dialog id="dialog"></dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
