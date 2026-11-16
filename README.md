@@ -4,7 +4,9 @@ A recipe manager built with Node.js, TypeScript and PostgreSQL.
 
 - **Add recipes** by pasting a link (imports the page's recipe data) or with a step-by-step wizard
 - **Search** by name or ingredient and filter by protein
-- **Plan a week of dinners** with one click — it avoids the same protein on back-to-back nights
+- **Label recipes** as dinner, lunch, breakfast, side, appetizer, dessert, snack or drink (a recipe can have several)
+- **Plan a week of dinners** with one click — it only uses Dinner recipes and avoids the same protein on back-to-back nights
+- **Round out a night** by adding sides, desserts or any other recipe alongside the dinner
 - **Preview mode** — shuffle or hand-pick a replacement for any night before confirming
 - **Shopping list** — ingredients for the week merged and grouped by store section
 
@@ -16,7 +18,7 @@ You only need Docker.
 docker compose up --build
 ```
 
-Then open http://localhost:3000. Sixteen starter recipes are loaded the first time.
+Then open http://localhost:3000. Starter recipes (dinners, sides and desserts) are loaded the first time.
 
 - Use a different port: `APP_PORT=8080 docker compose up --build`
 - Stop: `docker compose down` (your recipes are kept in a Docker volume)
