@@ -10,12 +10,23 @@ const PROTEINS = {
   vegetarian: { label: 'Vegetarian', emoji: '🥦' },
   other: { label: 'Other', emoji: '🍽️' },
 };
+const MEAL_TYPES = {
+  dinner: 'Dinner',
+  lunch: 'Lunch',
+  breakfast: 'Breakfast',
+  side: 'Side',
+  appetizer: 'Appetizer',
+  dessert: 'Dessert',
+  snack: 'Snack',
+  drink: 'Drink',
+};
 const WIZARD_STEPS = ['Basics', 'Ingredients', 'Instructions', 'Helpful tips', 'Review'];
 
 const state = {
   view: 'recipes',
   q: '',
   protein: '',
+  type: '',
   wizard: null, // { step, id, imported, data }
   plan: null,
 };
@@ -53,6 +64,17 @@ function toast(message, isError = false) {
 function badge(protein) {
   const p = PROTEINS[protein] || PROTEINS.other;
   return `<span class="badge p-${esc(protein)}">${p.emoji} ${p.label}</span>`;
+}
+
+function typeBadges(recipe) {
+  return (recipe.meal_types || []).map((t) => `<span class="badge type">${esc(MEAL_TYPES[t] || t)}</span>`).join('');
+}
+
+/** Type labels, plus the protein for main meals (it means little on a dessert or side). */
+function recipeBadges(recipe) {
+  const types = recipe.meal_types || [];
+  const isMain = types.includes('dinner') || types.includes('lunch');
+  return typeBadges(recipe) + (isMain ? badge(recipe.protein) : '');
 }
 
 function thumb(recipe, cls = 'thumb') {
@@ -114,6 +136,7 @@ async function renderRecipes() {
       <a class="btn primary" href="#add">＋ Add recipe</a>
     </div>
     <div class="search"><input type="search" id="q" placeholder="Search by name or ingredient…" value="${esc(state.q)}" aria-label="Search recipes" /></div>
+    <div class="chips tight" id="type-chips"></div>
     <div class="chips" id="chips"></div>
     <div id="results"></div>`;
   renderChips();
@@ -127,7 +150,11 @@ async function renderRecipes() {
 }
 
 function renderChips() {
-  const chips = [['', 'All'], ...Object.entries(PROTEINS).map(([k, v]) => [k, `${v.emoji} ${v.label}`])];
+  const types = [['', 'All types'], ...Object.entries(MEAL_TYPES)];
+  document.getElementById('type-chips').innerHTML = types
+    .map(([key, label]) => `<button class="chip ${state.type === key ? 'active' : ''}" data-action="filter-type" data-type="${key}">${label}</button>`)
+    .join('');
+  const chips = [['', 'Any protein'], ...Object.entries(PROTEINS).map(([k, v]) => [k, `${v.emoji} ${v.label}`])];
   document.getElementById('chips').innerHTML = chips
     .map(([key, label]) => `<button class="chip ${state.protein === key ? 'active' : ''}" data-action="filter" data-protein="${key}">${label}</button>`)
     .join('');
@@ -139,9 +166,10 @@ async function loadRecipes() {
   const params = new URLSearchParams();
   if (state.q.trim()) params.set('q', state.q.trim());
   if (state.protein) params.set('protein', state.protein);
+  if (state.type) params.set('type', state.type);
   const recipes = await api('/recipes?' + params);
   if (seq !== loadSeq || state.view !== 'recipes') return;
-  const filtered = state.q.trim() || state.protein;
+  const filtered = state.q.trim() || state.protein || state.type;
   document.getElementById('count').textContent = `${recipes.length} ${recipes.length === 1 ? 'recipe' : 'recipes'}${filtered ? ' found' : ' in your box'}`;
   const results = document.getElementById('results');
   if (recipes.length === 0) {
@@ -158,7 +186,7 @@ async function loadRecipes() {
         <div class="body">
           <h3>${esc(r.title)}</h3>
           <p class="desc">${esc(r.description)}</p>
-          <div class="meta">${badge(r.protein)}<span>${timeText(r)}</span></div>
+          <div class="meta">${recipeBadges(r)}<span>${timeText(r)}</span></div>
         </div>
       </button>`,
     )
@@ -170,7 +198,7 @@ async function openRecipe(id) {
   const facts = [timeText(r), r.servings ? `Serves ${r.servings}` : ''].filter(Boolean).join(' · ');
   dialog.innerHTML = `
     <div class="dlg-head">
-      <div><h1>${esc(r.title)}</h1><div class="meta" style="margin-top:10px">${badge(r.protein)}<span>${facts}</span></div></div>
+      <div><h1>${esc(r.title)}</h1><div class="meta" style="margin-top:10px">${recipeBadges(r)}<span>${facts}</span></div></div>
       <button class="close" data-action="close-dialog" aria-label="Close">✕</button>
     </div>
     <div class="dlg-body detail">
@@ -193,7 +221,7 @@ async function openRecipe(id) {
 // ---------- add recipe: import + wizard ----------
 
 function blankRecipe() {
-  return { title: '', description: '', protein: 'auto', servings: '', prep_minutes: '', cook_minutes: '', image_url: '', source_url: '', ingredientsText: '', stepsText: '', tipsText: '' };
+  return { title: '', description: '', meal_types: ['dinner'], protein: 'auto', servings: '', prep_minutes: '', cook_minutes: '', image_url: '', source_url: '', ingredientsText: '', stepsText: '', tipsText: '' };
 }
 
 function startWizard(recipe, extra = {}) {
@@ -257,6 +285,10 @@ function wizardStepHtml(w) {
     return `
       <div class="field"><label for="f-title">Recipe name</label><input type="text" id="f-title" value="${esc(d.title)}" placeholder="e.g. Grandma's meatloaf" /></div>
       <div class="field"><label for="f-description">Short description <span class="hint">(optional)</span></label><input type="text" id="f-description" value="${esc(d.description)}" /></div>
+      <fieldset class="field types">
+        <legend>What kind of recipe is it? <span class="hint">— pick all that apply. Only Dinner recipes are used when planning a week.</span></legend>
+        ${Object.entries(MEAL_TYPES).map(([k, label]) => `<label class="type-opt"><input type="checkbox" name="meal_types" value="${k}" ${d.meal_types.includes(k) ? 'checked' : ''} /><span>${label}</span></label>`).join('')}
+      </fieldset>
       <div class="field-row">
         <div class="field"><label for="f-protein">Main protein</label>
           <select id="f-protein">
@@ -287,6 +319,7 @@ function wizardStepHtml(w) {
       <p class="muted small">Things worth remembering next time: substitutions, make-ahead and storage notes, what to serve it with.</p>`;
   }
   const facts = [
+    d.meal_types.map((t) => MEAL_TYPES[t]).join(', '),
     d.protein === 'auto' ? 'Protein: detected when saved' : `Protein: ${PROTEINS[d.protein]?.label || d.protein}`,
     d.servings ? `Serves ${d.servings}` : '',
     d.prep_minutes ? `Prep ${d.prep_minutes} min` : '',
@@ -331,12 +364,15 @@ function captureWizard() {
     const el = document.getElementById('f-' + key);
     if (el) d[key] = el.value;
   }
+  const typeBoxes = document.querySelectorAll('input[name="meal_types"]');
+  if (typeBoxes.length) d.meal_types = [...typeBoxes].filter((b) => b.checked).map((b) => b.value);
 }
 
 function wizardNext() {
   captureWizard();
   const w = state.wizard;
   if (w.step === 0 && !w.data.title.trim()) return toast('Give the recipe a name first.', true);
+  if (w.step === 0 && w.data.meal_types.length === 0) return toast('Pick at least one kind of recipe.', true);
   if (w.step === 1 && lines(w.data.ingredientsText).length === 0) return toast('Add at least one ingredient.', true);
   w.step++;
   renderWizard();
@@ -346,7 +382,7 @@ async function wizardSave() {
   const w = state.wizard;
   const d = w.data;
   const body = {
-    title: d.title, description: d.description, protein: d.protein, servings: d.servings,
+    title: d.title, description: d.description, meal_types: d.meal_types, protein: d.protein, servings: d.servings,
     prep_minutes: d.prep_minutes, cook_minutes: d.cook_minutes, image_url: d.image_url, source_url: d.source_url,
     ingredients: lines(d.ingredientsText), steps: lines(d.stepsText), tips: lines(d.tipsText),
   };
@@ -366,7 +402,7 @@ async function renderWeek() {
     main.innerHTML = `
       <div class="page-head"><div><h1>This week</h1></div></div>
       <div class="empty"><div class="icon">🗓️</div><h2>No dinners planned yet</h2>
-        <p>One click picks seven dinners, without the same protein two nights in a row.</p>
+        <p>One click picks seven of your Dinner recipes, without the same protein two nights in a row.</p>
         <button class="btn primary big" data-action="generate-plan">Plan my week</button></div>`;
     return;
   }
@@ -378,7 +414,7 @@ async function renderWeek() {
       <button class="btn" data-action="generate-plan">↻ Plan a new week</button>
     </div>
     ${draft
-      ? `<div class="notice info"><b>Preview mode.</b> Use <b>Shuffle</b> for a random replacement or <b>Choose…</b> to pick a specific recipe.</div>`
+      ? `<div class="notice info"><b>Preview mode.</b> Use <b>Shuffle</b> for a random replacement, <b>Choose…</b> to pick a specific dinner, or <b>＋ Add</b> to put a side or dessert with it.</div>`
       : `<div class="notice ok"><b>Week confirmed.</b> Your shopping list is ready.</div>`}
     ${conflicts ? `<div class="notice warn">⚠ ${conflicts === 1 ? 'One night has' : conflicts + ' nights have'} the same protein as the night before.</div>` : ''}
     <div class="week">${plan.days.map((d) => dayHtml(d, draft)).join('')}</div>
@@ -404,18 +440,67 @@ function dayHtml(day, draft) {
              <div class="meta">${badge(r.protein)}<span>${timeText(r)}</span></div>`
           : '<span class="muted">No recipe (it was deleted)</span>'}
         ${day.sameAsPrevious ? '<span class="warn-text">⚠ Same protein as the night before</span>' : ''}
+        ${day.extras.length
+          ? `<div class="extras">${day.extras
+              .map(
+                (x) => `<span class="extra"><span class="with">${esc(extraLabel(x))}</span>
+                  <button class="title" data-action="open-recipe" data-id="${x.id}">${esc(x.title)}</button>
+                  ${draft ? `<button class="remove" data-action="remove-extra" data-day="${day.dayIndex}" data-id="${x.id}" aria-label="Remove ${esc(x.title)} from ${day.dayName}">✕</button>` : ''}</span>`,
+              )
+              .join('')}</div>`
+          : ''}
       </div>
       ${draft
         ? `<div class="btn-row">
              <button class="btn sm" data-action="shuffle-day" data-day="${day.dayIndex}" aria-label="Shuffle ${day.dayName}">🔀 Shuffle</button>
              <button class="btn sm" data-action="choose-day" data-day="${day.dayIndex}" aria-label="Choose a recipe for ${day.dayName}">Choose…</button>
+             <button class="btn sm" data-action="add-extra" data-day="${day.dayIndex}" aria-label="Add a side or dessert to ${day.dayName}">＋ Add</button>
            </div>`
         : '<div></div>'}
     </div>`;
 }
 
+/** "Side", "Dessert"... — how an add-on relates to the dinner; falls back to its first type. */
+function extraLabel(recipe) {
+  const types = recipe.meal_types || [];
+  const t = types.find((x) => x !== 'dinner' && x !== 'lunch' && x !== 'breakfast') || types[0];
+  return MEAL_TYPES[t] || 'Also';
+}
+
+async function openExtraPicker(dayIndex) {
+  const day = state.plan.days[dayIndex];
+  const taken = new Set([day.recipe?.id, ...day.extras.map((x) => x.id)]);
+  const mainTypes = ['dinner', 'lunch', 'breakfast'];
+  const isMainOnly = (r) => r.meal_types.every((t) => mainTypes.includes(t));
+  // Sides, desserts and the like first; other full meals after.
+  const recipes = (await api('/recipes'))
+    .filter((r) => !taken.has(r.id))
+    .sort((a, b) => isMainOnly(a) - isMainOnly(b) || a.title.localeCompare(b.title));
+
+  dialog.innerHTML = `
+    <div class="dlg-head">
+      <div><h1>Add to ${esc(day.dayName)}'s dinner</h1>${day.recipe ? `<p class="muted small" style="margin-top:4px">Serving with: ${esc(day.recipe.title)}</p>` : ''}</div>
+      <button class="close" data-action="close-dialog" aria-label="Close">✕</button>
+    </div>
+    <div class="dlg-body">
+      <input type="search" id="pick-q" placeholder="Filter by name or type (side, dessert…)" aria-label="Filter recipes" />
+      <div class="pick-list" id="pick-list"></div>
+    </div>`;
+  const draw = (q) => {
+    const needle = q.toLowerCase().trim();
+    const matches = recipes.filter((r) => (r.title + ' ' + r.meal_types.map((t) => MEAL_TYPES[t]).join(' ')).toLowerCase().includes(needle));
+    document.getElementById('pick-list').innerHTML =
+      matches
+        .map((r) => `<button class="pick" data-action="pick-extra" data-day="${dayIndex}" data-id="${r.id}"><span>${esc(r.title)}</span><span class="meta">${typeBadges(r)}</span></button>`)
+        .join('') || '<p class="muted">No recipes match.</p>';
+  };
+  draw('');
+  document.getElementById('pick-q').addEventListener('input', (e) => draw(e.target.value));
+  if (!dialog.open) dialog.showModal();
+}
+
 async function openPicker(dayIndex) {
-  const recipes = await api('/recipes');
+  const recipes = await api('/recipes?type=dinner');
   const days = state.plan.days;
   const day = days[dayIndex];
   const neighbors = [days[dayIndex - 1], days[dayIndex + 1]].filter((d) => d && d.recipe);
@@ -480,7 +565,7 @@ async function renderShopping() {
   const total = shopping.categories.reduce((n, c) => n + c.items.length, 0);
   main.innerHTML = `
     <div class="page-head">
-      <div><h1>Shopping list</h1><p class="muted">${total} items for ${shopping.recipeCount} dinners</p></div>
+      <div><h1>Shopping list</h1><p class="muted">${total} items for ${shopping.dinnerCount} dinners${shopping.extraCount ? ` and ${shopping.extraCount} ${shopping.extraCount === 1 ? 'side or dessert' : 'sides and desserts'}` : ''}</p></div>
       <div class="btn-row no-print">
         <button class="btn" data-action="copy-list">Copy</button>
         <button class="btn" data-action="print-list">Print</button>
@@ -521,9 +606,15 @@ const actions = {
     renderChips();
     return loadRecipes();
   },
+  'filter-type'(el) {
+    state.type = el.dataset.type;
+    renderChips();
+    return loadRecipes();
+  },
   'clear-filters'() {
     state.q = '';
     state.protein = '';
+    state.type = '';
     return renderRecipes();
   },
   'open-recipe': (el) => openRecipe(el.dataset.id),
@@ -569,6 +660,16 @@ const actions = {
     await renderWeek();
   },
   'choose-day': (el) => openPicker(Number(el.dataset.day)),
+  'add-extra': (el) => openExtraPicker(Number(el.dataset.day)),
+  async 'pick-extra'(el) {
+    await api(`/plan/days/${el.dataset.day}/extras`, { method: 'POST', body: { recipeId: Number(el.dataset.id) } });
+    dialog.close();
+    await renderWeek();
+  },
+  async 'remove-extra'(el) {
+    await api(`/plan/days/${el.dataset.day}/extras/${el.dataset.id}`, { method: 'DELETE' });
+    await renderWeek();
+  },
   async 'pick-recipe'(el) {
     await api(`/plan/days/${el.dataset.day}`, { method: 'PUT', body: { recipeId: Number(el.dataset.id) } });
     dialog.close();

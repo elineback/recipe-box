@@ -1,10 +1,11 @@
 import * as cheerio from 'cheerio';
-import { detectProtein, parseIngredient } from './ingredients';
+import { cleanMealTypes, detectProtein, parseIngredient } from './ingredients';
 
 export interface RecipeDraft {
   title: string;
   description: string;
   protein: string;
+  meal_types: string[];
   servings: number | null;
   prep_minutes: number | null;
   cook_minutes: number | null;
@@ -84,6 +85,21 @@ function instructions(value: any): string[] {
   return [];
 }
 
+/** Guess meal types from schema.org recipeCategory / keywords ("Main Course", "Dessert", ...). */
+function mealTypes(recipe: any): string[] {
+  const text = [recipe.recipeCategory, recipe.keywords].flat().filter(Boolean).join(' ').toLowerCase();
+  const found: string[] = [];
+  if (/dinner|main|entr[ée]e|supper/.test(text)) found.push('dinner');
+  if (/lunch/.test(text)) found.push('lunch');
+  if (/breakfast|brunch/.test(text)) found.push('breakfast');
+  if (/\bsides?\b|side dish/.test(text)) found.push('side');
+  if (/appetizer|starter/.test(text)) found.push('appetizer');
+  if (/dessert/.test(text)) found.push('dessert');
+  if (/snack/.test(text)) found.push('snack');
+  if (/drink|beverage|cocktail/.test(text)) found.push('drink');
+  return cleanMealTypes(found);
+}
+
 function absoluteHttpUrl(value: string | null, base: string): string | null {
   if (!value) return null;
   try {
@@ -121,6 +137,7 @@ export function extractRecipe(html: string, url: string): RecipeDraft {
     title,
     description: decode(recipe.description),
     protein: detectProtein(title, ingredients.map(parseIngredient)),
+    meal_types: mealTypes(recipe),
     servings: servings(recipe.recipeYield),
     prep_minutes: minutes(recipe.prepTime),
     cook_minutes: minutes(recipe.cookTime) ?? (recipe.prepTime ? null : minutes(recipe.totalTime)),

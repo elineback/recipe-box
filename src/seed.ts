@@ -5,6 +5,8 @@ export interface SeedRecipe {
   servings: number;
   prep: number;
   cook: number;
+  /** Meal types; defaults to dinner. */
+  types?: string[];
   ingredients: string[];
   steps: string[];
 }
@@ -122,5 +124,44 @@ export const SEED_RECIPES: SeedRecipe[] = [
     protein: 'turkey', servings: 4, prep: 15, cook: 25,
     ingredients: ['1.5 lb ground turkey', '1/2 cup breadcrumbs', '1 egg', '3 cloves garlic, minced', '1/2 cup grated parmesan', '1 tsp Italian seasoning', '1 jar marinara sauce', '3 zucchini, sliced', '1 tbsp olive oil'],
     steps: ['Heat oven to 400°F.', 'Mix turkey, breadcrumbs, egg, garlic, half the parmesan and seasoning; roll into balls.', 'Bake 18 minutes.', 'Simmer meatballs in marinara 5 minutes.', 'Sauté zucchini in oil and serve under the meatballs with remaining parmesan.'],
+  },
+];
+
+/** Starter sides and desserts, so dinners can be rounded out into full meals. */
+export const SEED_EXTRAS: SeedRecipe[] = [
+  {
+    title: 'Garlic Bread',
+    description: 'Crisp, buttery baguette with garlic and parsley.',
+    protein: 'vegetarian', servings: 6, prep: 5, cook: 12, types: ['side'],
+    ingredients: ['1 baguette', '6 tbsp butter, softened', '4 cloves garlic, minced', '2 tbsp fresh parsley, chopped', '1/4 tsp salt'],
+    steps: ['Heat oven to 400°F.', 'Mix butter, garlic, parsley and salt.', 'Halve the baguette lengthwise and spread with the butter.', 'Bake 10–12 minutes until golden, then slice.'],
+  },
+  {
+    title: 'Simple Green Salad',
+    description: 'Mixed greens with a quick lemon vinaigrette.',
+    protein: 'vegetarian', servings: 4, prep: 10, cook: 0, types: ['side', 'lunch'],
+    ingredients: ['6 cups mixed greens', '1 cucumber, sliced', '1 cup cherry tomatoes, halved', '3 tbsp olive oil', '1 lemon', '1 tsp Dijon mustard', '1/4 tsp salt'],
+    steps: ['Whisk oil, the juice of the lemon, mustard and salt.', 'Toss greens, cucumber and tomatoes with the dressing just before serving.'],
+  },
+  {
+    title: 'Roasted Garlic Potatoes',
+    description: 'Crispy oven-roasted potatoes with garlic and rosemary.',
+    protein: 'vegetarian', servings: 4, prep: 10, cook: 35, types: ['side'],
+    ingredients: ['2 lb baby potatoes, halved', '3 tbsp olive oil', '4 cloves garlic, minced', '1 tbsp fresh rosemary, chopped', '1 tsp salt'],
+    steps: ['Heat oven to 425°F.', 'Toss potatoes with oil, rosemary and salt.', 'Roast 25 minutes, stir in garlic, and roast 10 more until crisp.'],
+  },
+  {
+    title: 'Fudgy Brownies',
+    description: 'One-bowl chocolate brownies with a crackly top.',
+    protein: 'vegetarian', servings: 12, prep: 10, cook: 25, types: ['dessert'],
+    ingredients: ['1/2 cup butter, melted', '1 cup sugar', '2 eggs', '1 tsp vanilla extract', '1/3 cup cocoa powder', '1/2 cup flour', '1/4 tsp salt', '1/2 cup chocolate chips'],
+    steps: ['Heat oven to 350°F and line an 8-inch pan.', 'Whisk butter, sugar, eggs and vanilla.', 'Fold in cocoa, flour, salt and chocolate chips.', 'Bake 22–25 minutes; cool before cutting.'],
+  },
+  {
+    title: 'Berry Crisp',
+    description: 'Warm mixed berries under a buttery oat topping.',
+    protein: 'vegetarian', servings: 6, prep: 10, cook: 35, types: ['dessert'],
+    ingredients: ['5 cups frozen mixed berries', '1/4 cup sugar', '1 tbsp cornstarch', '3/4 cup rolled oats', '1/2 cup flour', '1/3 cup brown sugar', '6 tbsp butter, cold', '1/2 tsp ground cinnamon'],
+    steps: ['Heat oven to 375°F.', 'Toss berries with sugar and cornstarch in a baking dish.', 'Rub oats, flour, brown sugar, cinnamon and butter into crumbs; scatter on top.', 'Bake 35 minutes until bubbling.'],
   },
 ];

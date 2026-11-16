@@ -17,6 +17,25 @@ export const PROTEINS = [
 ] as const;
 export type Protein = (typeof PROTEINS)[number];
 
+/** What a recipe is for. A recipe can have several (e.g. lunch and dinner). */
+export const MEAL_TYPES = [
+  'dinner',
+  'lunch',
+  'breakfast',
+  'side',
+  'appetizer',
+  'dessert',
+  'snack',
+  'drink',
+] as const;
+
+/** Keep only known meal types, in canonical order; default to dinner. */
+export function cleanMealTypes(value: unknown): string[] {
+  const given = Array.isArray(value) ? value.map((v) => String(v).toLowerCase()) : [];
+  const valid = MEAL_TYPES.filter((t) => given.includes(t));
+  return valid.length ? [...valid] : ['dinner'];
+}
+
 const UNICODE_FRACTIONS: Record<string, string> = {
   '½': '1/2', '⅓': '1/3', '⅔': '2/3', '¼': '1/4', '¾': '3/4',
   '⅕': '1/5', '⅖': '2/5', '⅗': '3/5', '⅘': '4/5', '⅙': '1/6',
